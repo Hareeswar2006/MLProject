@@ -5,6 +5,8 @@ import dill
 import pandas as pd
 from src.exception import CustomException
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
+
 def save_object(file_path,obj):
     try:
         dir_path=os.path.dirname(file_path)
@@ -16,20 +18,24 @@ def save_object(file_path,obj):
         raise CustomException(e,sys)
     
 
-def evaluate_model(X_train,Y_train,X_test,Y_test,models):
+def evaluate_model(X_train,Y_train,X_test,Y_test,models,params):
     try:
         report = {}
         trained_models = {}
         for i in range(len(list(models))):
             model = list(models.values())[i]
-            model.fit(X_train,Y_train) # Train model
-            Y_train_pred=model.predict(X_train)
-            Y_test_pred=model.predict(X_test)
-            train_model_score=r2_score(Y_train,Y_train_pred)
-            test_model_score=r2_score(Y_test,Y_test_pred)
-            report[list(models.keys())[i]]=test_model_score
+            para=params[list(models.keys())[i]]
+            gs = GridSearchCV(model,para,cv=3)
+            gs.fit(X_train,Y_train)
+            model.set_params(**gs.best_params_)
+            model.fit(X_train,Y_train)
+            y_train_pred = model.predict(X_train)
+            y_test_pred = model.predict(X_test)
+            train_model_score = r2_score(Y_train, y_train_pred)
+            test_model_score = r2_score(Y_test, y_test_pred)
+            report[list(models.keys())[i]] = test_model_score
             trained_models[list(models.keys())[i]] = model
-            
+
         return report,trained_models
         
     except Exception as e:
